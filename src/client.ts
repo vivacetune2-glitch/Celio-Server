@@ -26,7 +26,7 @@ export class Client {
         },
 
         disconnect: () => {
-            console.warn('Client ' + this.clientId + ` disconnected`);
+            console.log('Client ' + this.clientId + ` disconnected`);
             setTimeout(() => this.checkDisconnect(), 5000);
         }
     };
@@ -94,7 +94,7 @@ export class Client {
     emitWithRetry<R>(event: string, data?: any, {
         retries = 5,
         timeout = 1000,
-        backoff = 500  // ms added per retry
+        backoff = 100  // ms added per retry
     } = {}) {
         return new Promise((resolve, reject) => {
             let attempt = 0;

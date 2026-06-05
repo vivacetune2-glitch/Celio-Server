@@ -103,7 +103,9 @@ export class Session {
                 packet.client.emitWithRetry<boolean>(packet.event, packet.args)
                     .catch(err => {
                         console.error("Ack failed after retries:", err);
-                        return Promise.resolve();
+                        this.send$.unsubscribe();
+                        this.evict();
+                        return Promise.reject();
                     })
             )
         ).subscribe();
