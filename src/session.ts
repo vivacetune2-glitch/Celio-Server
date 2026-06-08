@@ -105,7 +105,7 @@ export class Session {
                         console.error("Ack failed after retries:", err);
                         this.send$.unsubscribe();
                         this.evict();
-                        return Promise.reject();
+                        return Promise.resolve();
                     })
             )
         ).subscribe();
