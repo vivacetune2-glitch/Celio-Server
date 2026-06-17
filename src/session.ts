@@ -54,6 +54,8 @@ export class Session {
 
     private closeSubject: Subject<Session> = new Subject();
 
+    private ackablePacketSubscription: Subscription;
+
     /**
      * Observable that emits when one of the following events occurs:
      * - The Link has successfully ended
@@ -98,12 +100,12 @@ export class Session {
     };
 
     constructor(private sessionId: string) {
-        this.send$.pipe(
+        this.ackablePacketSubscription = this.send$.pipe(
             concatMap((packet: OutgoingAckablePacket) =>
                 packet.client.emitWithRetry<boolean>(packet.event, packet.args)
                     .catch(err => {
                         console.error("Ack failed after retries:", err);
-                        this.send$.unsubscribe();
+                        this.ackablePacketSubscription.unsubscribe()
                         this.evict();
                         return Promise.resolve();
                     })
