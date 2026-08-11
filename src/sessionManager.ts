@@ -68,9 +68,9 @@ export class SessionManager {
         sessionCode: string
     ): Result<SessionState, ErrorType> {
 
-        const session = this.sessions.get(sessionCode);
+        const sessionId = this.sessionCodes.get(sessionCode);
 
-        if (!session) {
+        if (!sessionId) {
             console.warn(
                 'Client ' +
                 client.id() +
@@ -82,7 +82,7 @@ export class SessionManager {
             return err(ErrorType.NotFound);
         }
 
-        return this.enterSession(client, sessionCode);
+        return this.enterSession(client, sessionId);
     }
 
     enterSession(
@@ -160,6 +160,8 @@ export class SessionManager {
                 this.clientToSession.delete(client);
             }
         }
+
+        this.sessionCodes.delete(session.code());
 
         const result = this.sessions.delete(session.id());
 
