@@ -1,8 +1,8 @@
 import { Session } from "./session.js";
 import { Result } from 'true-myth';
 import { ok, err } from 'true-myth/result';
-import {Client} from "./client.js";
-import {take} from "rxjs";
+import { Client } from "./client.js";
+import { take } from "rxjs";
 
 enum ErrorType {
     NotFound = "Session not found",
@@ -27,26 +27,37 @@ export class SessionManager {
             return err(ErrorType.AlreadyExists);
         }
 
-        let sessionId: string;
+        // 内部用セッションID
+        const sessionId: string = nanoid();
+
+        // ユーザー表示用4桁コード
+        let sessionCode: string;
 
         do {
-            sessionId = Math.floor(Math.random() * 10000)
+            sessionCode = Math.floor(Math.random() * 10000)
                 .toString()
                 .padStart(4, "0");
-        } while (this.sessions.has(sessionId));
+        } while (this.sessionCodes.has(sessionCode));
 
-        const session = new Session(sessionId);
+        const session = new Session(
+            sessionId,
+            sessionCode
+        );
 
         session.close$
             .pipe(take(1))
             .subscribe((closingSession: Session) => {
                 console.log(
-                    'Session ' + closingSession.id() + ' emitted closing event'
+                    "Session " +
+                    closingSession.id() +
+                    " emitted closing event"
                 );
+
                 this.deleteSession(closingSession);
             });
 
         this.sessions.set(sessionId, session);
+        this.sessionCodes.set(sessionCode, sessionId);
 
         return this.enterSession(client, sessionId);
     }
@@ -56,11 +67,12 @@ export class SessionManager {
         sessionCode: string
     ): Result<SessionState, ErrorType> {
 
-        const session = this.findSessionByCode(sessionCode);
+        const session = this.sessions.get(sessionCode);
 
         if (!session) {
             console.warn(
-                'Client ' + client.id() +
+                'Client ' +
+                client.id() +
                 ' tried to join session with code ' +
                 sessionCode +
                 ' which does not exist'
@@ -69,76 +81,99 @@ export class SessionManager {
             return err(ErrorType.NotFound);
         }
 
-        return this.enterSession(
-            client,
-            session.id()
-        );
+        return this.enterSession(client, sessionCode);
     }
 
-    enterSession(client: Client, sessionId: string) : Result<SessionState, ErrorType> {
-        const session = this.findSession(sessionId)
+    enterSession(
+        client: Client,
+        sessionId: string
+    ): Result<SessionState, ErrorType> {
+
+        const session = this.sessions.get(sessionId);
+
         if (!session) {
-            console.warn('Client ' + client.id() + ' tried to join session with id ' + sessionId + ' which does not exist');
+            console.warn(
+                'Client ' +
+                client.id() +
+                ' tried to join session with id ' +
+                sessionId +
+                ' which does not exist'
+            );
+
             return err(ErrorType.NotFound);
         }
+
         if (session.isFull()) {
-            console.warn('Client ' + client.id() + ' tried to join session with id ' + sessionId + ' which is full');
+            console.warn(
+                'Client ' +
+                client.id() +
+                ' tried to join session with id ' +
+                sessionId +
+                ' which is full'
+            );
+
             return err(ErrorType.SessionFull);
         }
+
         this.clientToSession.set(client, sessionId);
+
         session.enter(client);
+
         return ok({
-            id: sessionId,
+            id: session.id(),
             code: session.code(),
             full: session.isFull()
         });
     }
 
-    leaveSession(client: Client)  {
+    leaveSession(client: Client) {
+
         if (!this.clientToSession.has(client)) {
-            console.warn('Client ' + client.id() +' tried to leave session but was not in one');
+            console.warn(
+                'Client ' +
+                client.id() +
+                ' tried to leave session but was not in one'
+            );
             return;
         }
-        let sessionId = this.clientToSession.get(client)!;
-        const session = this.findSession(sessionId);
+
+        const sessionId = this.clientToSession.get(client)!;
+        const session = this.sessions.get(sessionId);
+
         if (!session) {
-            console.warn('Client ' + client.id() + ' tried to leave session but session was not found');
+            console.warn(
+                'Client ' +
+                client.id() +
+                ' tried to leave session but session was not found'
+            );
             return;
         }
+
         session.leave(client);
     }
 
-    private findSession(sessionId: string): Session | undefined {
-        return this.sessions.get(sessionId);
-    }
-
-    private findSessionByCode(
-        sessionCode: string
-    ): Session | undefined {
-        const sessionId = this.sessionCodes.get(sessionCode);
-
-        if (!sessionId) {
-            return undefined;
-        }
-
-        return this.sessions.get(sessionId);
-    }
-
-
     private deleteSession(session: Session) {
+
         for (const [client, id] of this.clientToSession) {
             if (id === session.id()) {
                 this.clientToSession.delete(client);
             }
         }
-        this.sessionCodes.delete(session.code());
+
         const result = this.sessions.delete(session.id());
-        const sessionId = session.id();
+
         if (result) {
-            console.log('Session deleted with id: ' + sessionId)
+            console.log(
+                'Session deleted with id: ' +
+                session.id()
+            );
         }
         else {
-            console.warn('Session with id could not be deleted because id ' + sessionId + ' was not found')
+            console.warn(
+                'Session with id could not be deleted because id ' +
+                session.id() +
+                ' was not found'
+            );
         }
     }
 }
