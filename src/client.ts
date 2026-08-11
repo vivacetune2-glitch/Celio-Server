@@ -25,33 +25,17 @@ export class Client {
             responseHandler(sessionState);
         },
 
-        sessionCreate: (responseHandler: any) => {
-            const sessionState =
-                this.sessionManager.createSession(this);
-
-            if (sessionState.isOk) {
-                console.log(
-                    'Client ' +
-                    this.clientId +
-                    ' created session with id ' +
-                    sessionState.value.id
-                );
-            }
-
-            responseHandler(sessionState);
-        },
-
-        sessionJoin: (sessionId: string, responseHandler: any) => {
+        sessionJoin: (sessionCode: string, responseHandler: any) => {
             console.log(
                 this.clientId +
-                ' Client wants to join session ' +
-                sessionId
+                ' Client wants to join session with code ' +
+                sessionCode
             );
 
             const sessionState =
-                this.sessionManager.enterSession(
+                this.sessionManager.enterSessionByCode(
                     this,
-                    sessionId
+                    sessionCode
                 );
 
             responseHandler(sessionState);
