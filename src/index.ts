@@ -4,7 +4,19 @@ import { Server, Socket } from "socket.io";
 import { SessionManager } from "./sessionManager.js";
 import {Client} from "./client.js";
 
-const httpServer = createServer();
+const httpServer = createServer((req, res) => {
+    if (req.url === "/health") {
+        res.writeHead(200, {
+            "Content-Type": "text/plain"
+        });
+
+        res.end("Celio Server OK");
+        return;
+    }
+
+    res.writeHead(404);
+    res.end();
+});
 const port = Number(process.env.PORT) || 10000;
 
 httpServer.listen(port, "0.0.0.0", () => {

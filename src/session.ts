@@ -99,7 +99,13 @@ export class Session {
         }
     };
 
-    constructor(private sessionId: string) {
+    private sessionCode: string;
+
+    constructor(
+        private sessionId: string,
+        sessionCode: string
+    ) {
+        this.sessionCode = sessionCode;
         this.ackablePacketSubscription = this.send$.pipe(
             concatMap((packet: OutgoingAckablePacket) =>
                 packet.client.emitWithRetry<boolean>(packet.event, packet.args)
@@ -191,6 +197,10 @@ export class Session {
     id(): string {
         return this.sessionId;
     }
+    code(): string {
+        return this.sessionCode;
+    }
+
 
     /**
      * Check if the session is full.

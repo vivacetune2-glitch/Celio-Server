@@ -1,5 +1,4 @@
 import { Session } from "./session.js";
-import { nanoid } from "nanoid";
 import { Result } from 'true-myth';
 import { ok, err } from 'true-myth/result';
 import {Client} from "./client.js";
@@ -13,28 +12,67 @@ enum ErrorType {
 
 interface SessionState {
     id: string;
+    code: string;
     full: boolean;
 }
 
 export class SessionManager {
 
     private sessions: Map<string, Session> = new Map();
+    private sessionCodes: Map<string, string> = new Map();
     private clientToSession: Map<Client, string> = new Map();
 
-    createSession(client: Client) :  Result<SessionState, ErrorType> {
-        if (this.clientToSession.has(client)) return err(ErrorType.AlreadyExists);
-        const sessionId: string = nanoid();
+    createSession(client: Client): Result<SessionState, ErrorType> {
+        if (this.clientToSession.has(client)) {
+            return err(ErrorType.AlreadyExists);
+        }
+
+        let sessionId: string;
+
+        do {
+            sessionId = Math.floor(Math.random() * 10000)
+                .toString()
+                .padStart(4, "0");
+        } while (this.sessions.has(sessionId));
+
         const session = new Session(sessionId);
 
         session.close$
             .pipe(take(1))
             .subscribe((closingSession: Session) => {
-                console.log('Session ' + closingSession.id() + ' emitted closing event');
+                console.log(
+                    'Session ' + closingSession.id() + ' emitted closing event'
+                );
                 this.deleteSession(closingSession);
             });
 
         this.sessions.set(sessionId, session);
+
         return this.enterSession(client, sessionId);
+    }
+
+    enterSessionByCode(
+        client: Client,
+        sessionCode: string
+    ): Result<SessionState, ErrorType> {
+
+        const session = this.findSessionByCode(sessionCode);
+
+        if (!session) {
+            console.warn(
+                'Client ' + client.id() +
+                ' tried to join session with code ' +
+                sessionCode +
+                ' which does not exist'
+            );
+
+            return err(ErrorType.NotFound);
+        }
+
+        return this.enterSession(
+            client,
+            session.id()
+        );
     }
 
     enterSession(client: Client, sessionId: string) : Result<SessionState, ErrorType> {
@@ -49,7 +87,11 @@ export class SessionManager {
         }
         this.clientToSession.set(client, sessionId);
         session.enter(client);
-        return ok({id: sessionId, full: session.isFull()});
+        return ok({
+            id: sessionId,
+            code: session.code(),
+            full: session.isFull()
+        });
     }
 
     leaveSession(client: Client)  {
@@ -70,12 +112,26 @@ export class SessionManager {
         return this.sessions.get(sessionId);
     }
 
+    private findSessionByCode(
+        sessionCode: string
+    ): Session | undefined {
+        const sessionId = this.sessionCodes.get(sessionCode);
+
+        if (!sessionId) {
+            return undefined;
+        }
+
+        return this.sessions.get(sessionId);
+    }
+
+
     private deleteSession(session: Session) {
         for (const [client, id] of this.clientToSession) {
             if (id === session.id()) {
                 this.clientToSession.delete(client);
             }
         }
+        this.sessionCodes.delete(session.code());
         const result = this.sessions.delete(session.id());
         const sessionId = session.id();
         if (result) {

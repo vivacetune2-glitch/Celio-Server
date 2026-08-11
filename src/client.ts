@@ -8,15 +8,36 @@ export class Client {
     private socket$: BehaviorSubject<Socket>;
     private eventHandlers = {
 
-        sessionCreate: (sessionId: string, responseHandler: any) => {
+        sessionCreate: (responseHandler: any) => {
             const sessionState = this.sessionManager.createSession(this);
-            if (sessionState.isOk) console.log('Client ' + this.clientId + ` created session with id ` + sessionState.value.id);
+
+            if (sessionState.isOk) {
+                console.log(
+                    'Client ' +
+                    this.clientId +
+                    ' created session with id ' +
+                    sessionState.value.id +
+                    ' code ' +
+                    sessionState.value.code
+                );
+            }
+
             responseHandler(sessionState);
         },
 
-        sessionJoin: (sessionId: string, responseHandler: any) => {
-            console.log(this.clientId + ` Client wants to join session ` + sessionId);
-            const sessionState = this.sessionManager.enterSession(this, sessionId);
+        sessionJoin: (sessionCode: string, responseHandler: any) => {
+            console.log(
+                this.clientId +
+                ` Client wants to join session with code ` +
+                sessionCode
+            );
+
+            const sessionState =
+                this.sessionManager.enterSessionByCode(
+                    this,
+                    sessionCode
+                );
+
             responseHandler(sessionState);
         },
 

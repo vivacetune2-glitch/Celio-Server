@@ -4,9 +4,9 @@ export type CreateSessionMessage = {
 
 export type JoinSessionMessage = {
     clientId: string;
-    sessionId: string;
+    sessionCode: string;
 };
 
 export type LeaveSessionMessage = {
-    clientId: string
+    clientId: string;
 };
