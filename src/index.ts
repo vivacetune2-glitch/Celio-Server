@@ -5,7 +5,11 @@ import { SessionManager } from "./sessionManager.js";
 import {Client} from "./client.js";
 
 const httpServer = createServer();
-const port = Number(process.env.PORT) || 443;
+const port = Number(process.env.PORT) || 10000;
+
+httpServer.listen(port, "0.0.0.0", () => {
+    console.log(`Celio Server listening on 0.0.0.0:${port}`);
+});
 
 const io = new Server(httpServer, {
     cors: { origin: "*" },
