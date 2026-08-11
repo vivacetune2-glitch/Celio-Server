@@ -22,7 +22,9 @@ function removeClient(clientId: string) {
     clients.delete(clientId);
 }
 
+console.log("Celio Server starting...");
 io.on("connection", (socket: Socket) => {
+    console.log("SOCKET.IO CONNECTION RECEIVED");
     let clientId: string = socket.handshake.auth.clientId;
     console.log("auth received:", clientId);
     if (clients.has(clientId)) clients.get(clientId)!.reconnect(socket);
